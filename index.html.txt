@@ -1,0 +1,405 @@
+                        {!submitted ? (
+                            <Btn onClick={submit} disabled={!sel} style={{ width: "100%", marginTop: 8 }}>
+                                Submit Answer
+                            </Btn>
+                        ) : (
+                            <div style={{ marginTop: 20 }}>
+                                <div style={{
+                                    background: isCorrect ? "rgba(52,211,153,0.08)" : "rgba(248,113,113,0.08)",
+                                    border: `1px solid ${isCorrect ? "#34d39933" : "#f8717133"}`,
+                                    borderRadius: 12,
+                                    padding: 20,
+                                    marginBottom: 16,
+                                }}>
+                                    <div style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                        marginBottom: 12,
+                                        color: isCorrect ? "#34d399" : "#f87171",
+                                        fontWeight: 700,
+                                        fontSize: 16,
+                                    }}>
+                                        <span style={{ fontSize: 20 }}>{isCorrect ? "✓" : "✗"}</span>
+                                        {isCorrect ? "Correct!" : "Incorrect"}
+                                    </div>
+                                    
+                                    <div style={{ color: T.txt2, fontSize: 14, lineHeight: 1.7, marginBottom: 12 }}>
+                                        <strong style={{ color: T.txt }}>Explanation:</strong><br />
+                                        {q.explanation}
+                                    </div>
+                                    
+                                    <div style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 6,
+                                        color: T.muted,
+                                        fontSize: 12,
+                                        fontStyle: "italic",
+                                    }}>
+                                        <span>📚</span>
+                                        <span>Reference: {q.reference}</span>
+                                    </div>
+                                </div>
+                                
+                                <Btn onClick={next} style={{ width: "100%" }}>
+                                    {idx + 1 >= questions.length ? "Finish Quiz →" : "Next Question →"}
+                                </Btn>
+                            </div>
+                        )}
+                    </Card>
+                </div>
+            );
+        }
+
+        // ─── Results Screen ──────────────────────────────────────────────────
+        function ResultsScreen({ score, total, answers, onRestart }) {
+            const pct = Math.round((score / total) * 100);
+            const passed = score >= PASS_THRESHOLD;
+            
+            const easy = answers.filter(a => a.difficulty === "Easy");
+            const moderate = answers.filter(a => a.difficulty === "Moderate");
+            const hard = answers.filter(a => a.difficulty === "Hard");
+            
+            const stats = [
+                { label: "Easy", total: easy.length, correct: easy.filter(a => a.correct).length, color: "#10b981" },
+                { label: "Moderate", total: moderate.length, correct: moderate.filter(a => a.correct).length, color: "#f59e0b" },
+                { label: "Hard", total: hard.length, correct: hard.filter(a => a.correct).length, color: "#ef4444" },
+            ];
+
+            const downloadFailed = () => {
+                const failed = answers.filter(a => !a.correct);
+                const blob = new Blob([JSON.stringify(failed, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `edic-failed-${new Date().toISOString().slice(0,10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            return (
+                <div className="animate-fadeUp">
+                    <Card style={{ padding: 40, textAlign: "center", marginBottom: 20 }}>
+                        <div style={{ fontSize: 64, marginBottom: 16 }}>{passed ? "🎉" : "📚"}</div>
+                        <h2 style={{ color: T.txt, fontSize: 28, fontWeight: 800, marginBottom: 8 }}>
+                            {passed ? "Congratulations!" : "Keep Studying!"}
+                        </h2>
+                        <p style={{ color: T.txt2, fontSize: 16, marginBottom: 24 }}>
+                            {passed 
+                                ? `You passed with ${score}/${total} (${pct}%)` 
+                                : `You scored ${score}/${total} (${pct}%). Pass threshold: ${PASS_THRESHOLD}`}
+                        </p>
+
+                        <div style={{
+                            width: 160,
+                            height: 160,
+                            margin: "0 auto 24px",
+                            position: "relative",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}>
+                            <svg viewBox="0 0 36 36" style={{ position: "absolute", width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
+                                <path
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    fill="none"
+                                    stroke="rgba(255,255,255,0.1)"
+                                    strokeWidth="3"
+                                />
+                                <path
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    fill="none"
+                                    stroke={passed ? T.mint : "#f87171"}
+                                    strokeWidth="3"
+                                    strokeDasharray={`${pct}, 100`}
+                                    style={{ transition: "stroke-dasharray 1s ease" }}
+                                />
+                            </svg>
+                            <div style={{ textAlign: "center" }}>
+                                <div style={{ fontSize: 32, fontWeight: 800, color: passed ? T.mint : "#f87171" }}>{pct}%</div>
+                                <div style={{ fontSize: 12, color: T.muted }}>{score}/{total}</div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
+                            {stats.map((s, i) => (
+                                <div key={i} style={{
+                                    background: T.glass,
+                                    borderRadius: 12,
+                                    padding: 16,
+                                    border: `1px solid ${T.border}`,
+                                }}>
+                                    <div style={{ fontSize: 20, marginBottom: 4 }}>{s.label === "Easy" ? "🌱" : s.label === "Moderate" ? "⚡" : "🔥"}</div>
+                                    <div style={{ color: s.color, fontSize: 20, fontWeight: 800 }}>{s.correct}/{s.total}</div>
+                                    <div style={{ color: T.muted, fontSize: 12 }}>{s.label}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+                            <Btn onClick={onRestart}>Generate New Quiz</Btn>
+                            <Btn onClick={downloadFailed} variant="secondary">
+                                💾 Export Failed Questions
+                            </Btn>
+                        </div>
+                    </Card>
+
+                    <h3 style={{ color: T.txt, fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Question Review</h3>
+                    
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        {answers.map((a, i) => (
+                            <Card key={i} style={{ padding: 20, opacity: a.correct ? 0.7 : 1 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                        <span style={{
+                                            width: 24,
+                                            height: 24,
+                                            borderRadius: "50%",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            background: a.correct ? "rgba(52,211,153,0.2)" : "rgba(248,113,113,0.2)",
+                                            color: a.correct ? "#34d399" : "#f87171",
+                                            fontSize: 14,
+                                            fontWeight: 700,
+                                        }}>
+                                            {a.correct ? "✓" : "✗"}
+                                        </span>
+                                        <span style={{ color: T.txt, fontWeight: 600, fontSize: 14 }}>Q{i + 1}</span>
+                                        <Badge difficulty={a.difficulty} />
+                                    </div>
+                                    <span style={{ color: T.muted, fontSize: 12 }}>{a.topic}</span>
+                                </div>
+                                
+                                <div style={{ color: T.txt2, fontSize: 13, marginBottom: 8, lineHeight: 1.5 }}>
+                                    {a.questionText}
+                                </div>
+                                
+                                <div style={{ display: "flex", gap: 16, fontSize: 12 }}>
+                                    <div style={{ color: a.correct ? "#34d399" : "#f87171" }}>
+                                        <strong>Your answer:</strong> {a.userAnswer}
+                                    </div>
+                                    {!a.correct && (
+                                        <div style={{ color: "#34d399" }}>
+                                            <strong>Correct:</strong> {a.correctAnswer}
+                                        </div>
+                                    )}
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── Main App ────────────────────────────────────────────────────────
+        function App() {
+            const [screen, setScreen] = useState("upload"); // upload, apikey, difficulty, loading, quiz, results
+            const [files, setFiles] = useState([]);
+            const [apiConfig, setApiConfig] = useState(null);
+            const [difficulty, setDifficulty] = useState("mixed");
+            const [questions, setQuestions] = useState([]);
+            const [progress, setProgress] = useState(0);
+            const [status, setStatus] = useState("");
+            const [error, setError] = useState(null);
+            const [debugInfo, setDebugInfo] = useState("");
+            const [finalScore, setFinalScore] = useState(0);
+            const [finalAnswers, setFinalAnswers] = useState([]);
+
+            const generateQuiz = async (files, difficulty, apiConfig) => {
+                setScreen("loading");
+                setProgress(0);
+                setError(null);
+                setDebugInfo("");
+                
+                const combinedText = files.map(f => f.text).join("\n\n---\n\n");
+                const fileNames = files.map(f => f.name);
+                const allQuestions = [];
+                const totalBatches = 3;
+                
+                const config = API_PROVIDERS[apiConfig.provider];
+                
+                for (let batch = 1; batch <= totalBatches; batch++) {
+                    setStatus(`Generating batch ${batch}/${totalBatches}...`);
+                    
+                    try {
+                        const prompt = buildPrompt(combinedText, difficulty, batch, totalBatches, fileNames);
+                        
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 120000);
+                        
+                        const response = await fetch(config.url, {
+                            method: "POST",
+                            headers: config.headers(apiConfig.key),
+                            body: JSON.stringify(config.body(prompt)),
+                            signal: controller.signal,
+                        });
+                        
+                        clearTimeout(timeoutId);
+                        
+                        if (!response.ok) {
+                            const errText = await response.text();
+                            throw new Error(`API Error ${response.status}: ${errText.slice(0, 200)}`);
+                        }
+                        
+                        const data = await response.json();
+                        const text = config.parseResponse(data);
+                        
+                        let batchQuestions;
+                        try {
+                            batchQuestions = JSON.parse(text);
+                        } catch (e) {
+                            // Try to extract JSON from markdown
+                            const jsonMatch = text.match(/\[[\s\S]*\]/);
+                            if (jsonMatch) {
+                                batchQuestions = JSON.parse(jsonMatch[0]);
+                            } else {
+                                throw new Error("Invalid JSON response");
+                            }
+                        }
+                        
+                        if (!Array.isArray(batchQuestions) || batchQuestions.length === 0) {
+                            throw new Error("Empty or invalid question array");
+                        }
+                        
+                        // Validate and clean questions
+                        const validQuestions = batchQuestions.filter(q => 
+                            q.vignette && q.questionText && q.options && q.correctAnswer && q.explanation
+                        );
+                        
+                        allQuestions.push(...validQuestions);
+                        setProgress(allQuestions.length);
+                        
+                        // Small delay between batches
+                        if (batch < totalBatches) {
+                            await new Promise(r => setTimeout(r, 1000));
+                        }
+                        
+                    } catch (err) {
+                        console.error("Batch error:", err);
+                        setError(`Failed on batch ${batch}: ${err.message}`);
+                        setDebugInfo(`Provider: ${apiConfig.provider}\nBatch: ${batch}\nError: ${err.stack || err.message}`);
+                        return;
+                    }
+                }
+                
+                // Ensure we have exactly 30 questions
+                const finalQuestions = allQuestions.slice(0, TOTAL_QUESTIONS);
+                if (finalQuestions.length < TOTAL_QUESTIONS) {
+                    setError(`Only generated ${finalQuestions.length} questions. Please try again.`);
+                    return;
+                }
+                
+                // Shuffle questions
+                setQuestions(shuffleArray(finalQuestions));
+                setScreen("quiz");
+            };
+
+            const handleFilesReady = (readyFiles) => {
+                setFiles(readyFiles);
+                // Check if we have saved API key
+                const savedProvider = localStorage.getItem("edic_provider") || "anthropic";
+                const savedKey = localStorage.getItem(`edic_key_${savedProvider}`);
+                
+                if (savedKey) {
+                    setApiConfig({ provider: savedProvider, key: savedKey });
+                    setScreen("difficulty");
+                } else {
+                    setScreen("apikey");
+                }
+            };
+
+            const handleKeySet = (config) => {
+                setApiConfig(config);
+                setScreen("difficulty");
+            };
+
+            const handleDifficultySelect = (diff) => {
+                setDifficulty(diff);
+                generateQuiz(files, diff, apiConfig);
+            };
+
+            const handleQuizComplete = (score, answers) => {
+                setFinalScore(score);
+                setFinalAnswers(answers);
+                setScreen("results");
+            };
+
+            const handleRestart = () => {
+                setScreen("upload");
+                setFiles([]);
+                setQuestions([]);
+                setProgress(0);
+                setError(null);
+                setFinalScore(0);
+                setFinalAnswers([]);
+            };
+
+            return (
+                <div style={{ maxWidth: 800, margin: "0 auto", padding: "24px 16px 60px" }}>
+                    <header style={{ textAlign: "center", marginBottom: 28 }}>
+                        <h1 style={{ 
+                            fontSize: 32, 
+                            fontWeight: 800, 
+                            background: `linear-gradient(135deg, ${T.cyan}, ${T.mint})`,
+                            WebkitBackgroundClip: "text",
+                            WebkitTextFillColor: "transparent",
+                            marginBottom: 6,
+                        }}>
+                            EDIC Quiz Generator
+                        </h1>
+                        <p style={{ color: T.txt2, fontSize: 15 }}>European Diploma in Intensive Care Medicine</p>
+                    </header>
+
+                    {screen === "upload" && <UploadScreen onFilesReady={handleFilesReady} />}
+                    
+                    {screen === "apikey" && (
+                        <ApiKeyScreen 
+                            onKeySet={handleKeySet} 
+                            onBack={() => setScreen("upload")}
+                        />
+                    )}
+                    
+                    {screen === "difficulty" && (
+                        <DifficultyScreen 
+                            files={files} 
+                            onSelect={handleDifficultySelect}
+                            onChangeKey={() => setScreen("apikey")}
+                        />
+                    )}
+                    
+                    {screen === "loading" && (
+                        <LoadingScreen 
+                            progress={progress} 
+                            status={status} 
+                            error={error}
+                            debugInfo={debugInfo}
+                        />
+                    )}
+                    
+                    {screen === "quiz" && (
+                        <QuizScreen 
+                            questions={questions} 
+                            onComplete={handleQuizComplete}
+                        />
+                    )}
+                    
+                    {screen === "results" && (
+                        <ResultsScreen 
+                            score={finalScore}
+                            total={questions.length}
+                            answers={finalAnswers}
+                            onRestart={handleRestart}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        // ─── Mount ───────────────────────────────────────────────────────────
+        const root = ReactDOM.createRoot(document.getElementById("root"));
+        root.render(<App />);
+    </script>
+</body>
+</html>
